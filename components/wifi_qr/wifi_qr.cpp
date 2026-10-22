@@ -175,7 +175,7 @@ class NetworkTile : public tessera::Tile {
   lv_obj_t *title_{}, *name_{}, *hint_{};
 };
 
-// The card: the code as large as the room allows, with what to do and the password beside or under it.
+// The card: the code as large as the room allows, in its middle, with the password under it.
 // A tap anywhere closes it, as Back does.
 class CodeCard : public tessera::Card {
  public:
@@ -191,17 +191,12 @@ class CodeCard : public tessera::Card {
     }
 
     const int w = c.width, h = c.height, gap = ui::px(12);
-    std::string hint = plugin_->text(ok_ ? "scan" : "too_long"), pass;
+    std::string pass;
     if (ok_ && net.show_password) {
       pass = strcmp(net.security, "nopass") == 0
                  ? std::string(plugin_->text("open_network"))
                  : tessera::fill(plugin_->text("password"), "password", roomy::plain(net.password));
     }
-
-    // Wide glass: the code on the left half, the words in the middle of the right. Otherwise the words under the code.
-    const bool beside = w > h * 4 / 3;
-    const int text_w = beside ? w / 2 - gap : w;
-    const Font hint_face = fitting(hint, text_w, {Font::BODY_LARGE, Font::BODY});
     // The largest font that has every character of the password; one the screen cannot write is left out, rather than
     // shown with letters missing that a guest would then type wrong. The code holds it whole either way.
     Font pass_face = Font::BODY;
@@ -210,61 +205,44 @@ class CodeCard : public tessera::Card {
       if (!ui::covers(pass, f)) continue;
       pass_face = f;
       pass_fits = true;
-      if (ui::text_width(pass, f) <= text_w) break;
+      if (ui::text_width(pass, f) <= w) break;
     }
     if (!pass_fits) pass.clear();
 
+    // The code in the middle of the room, the password under it; on a room too low for both the password goes, so
+    // the code keeps whole modules a phone can read.
     const int modules = ok_ ? wqr_getSize(qr_) + 2 * QUIET : 1;
-    int hint_h = ui::line_height(hint_face), pass_h = pass.empty() ? 0 : gap / 2 + ui::line_height(pass_face);
-    // Under the code on a low room: the password goes first, then the hint, so the code keeps whole modules a phone
-    // can read.
-    if (!beside && ok_ && std::min(w, h - hint_h - pass_h - gap) < modules * MIN_MODULE) {
+    int pass_h = pass.empty() ? 0 : gap + ui::line_height(pass_face);
+    if (pass_h && std::min(w, h - pass_h) < modules * MIN_MODULE) {
       pass.clear();
       pass_h = 0;
-      if (std::min(w, h - hint_h - gap) < modules * MIN_MODULE) hint_h = 0;
     }
-    const int words_h = hint_h + pass_h;
+    const int box = std::min(w, h - pass_h);
 
-    int box = beside ? std::min(h, w / 2) - gap : std::min(w, h - words_h - (words_h ? gap : 0));
-    int code_x, code_y, words_x, words_y;
-    if (beside) {
-      code_x = (w / 2 - box) / 2;
-      code_y = (h - box) / 2;
-      words_x = w / 2;
-      words_y = (h - words_h) / 2;
-    } else {
-      code_x = (w - box) / 2;
-      code_y = std::max(0, (h - box - gap - words_h) / 2);
-      words_x = 0;
-      words_y = code_y + box + gap;
-    }
-
-    // Whole pixels for each module, or a phone sees blurred edges; the code then sits in the middle of its box.
+    // Whole pixels for each module, or a phone sees blurred edges.
     module_ = std::max(1, box / modules);
     const int side = module_ * modules;
+    const int top = std::max(0, (h - side - pass_h) / 2);
     code_ = lv_obj_create(c.parent);
     lv_obj_remove_style_all(code_);
     lv_obj_remove_flag(code_, LV_OBJ_FLAG_CLICKABLE);  // a tap on the code is the card's, which closes
     lv_obj_remove_flag(code_, LV_OBJ_FLAG_SCROLLABLE);
-    lv_obj_set_pos(code_, code_x + (box - side) / 2, code_y + (box - side) / 2);
+    lv_obj_set_pos(code_, (w - side) / 2, top);
     lv_obj_set_size(code_, side, side);
     if (ok_) lv_obj_add_event_cb(code_, paint_code, LV_EVENT_DRAW_MAIN, this);
     else lv_obj_add_flag(code_, LV_OBJ_FLAG_HIDDEN);
 
-    hint_ = ui::label(c.parent, hint_face, theme::MUTED);
-    ui::set_text(hint_, hint);
-    if (!ok_) words_y = (h - hint_h) / 2;
-    if (hint_h) place(hint_, words_x, words_y, text_w, hint_face);
-    else lv_obj_add_flag(hint_, LV_OBJ_FLAG_HIDDEN);
-    pass_ = ui::label(c.parent, pass_face, theme::INK);
-    ui::set_text(pass_, pass);
-    if (pass.empty()) lv_obj_add_flag(pass_, LV_OBJ_FLAG_HIDDEN);
-    else place(pass_, words_x, words_y + hint_h + gap / 2, text_w, pass_face);
+    // A network too long for a code says so in the middle of the room instead.
+    const Font words_face = ok_ ? pass_face : fitting(plugin_->text("too_long"), w, {Font::BODY_LARGE, Font::BODY});
+    words_ = ui::label(c.parent, words_face, ok_ ? theme::INK : theme::MUTED);
+    ui::set_text(words_, ok_ ? pass : std::string(plugin_->text("too_long")));
+    if (!ok_) place(words_, 0, (h - ui::line_height(words_face)) / 2, w, words_face);
+    else if (pass.empty()) lv_obj_add_flag(words_, LV_OBJ_FLAG_HIDDEN);
+    else place(words_, 0, top + side + gap, w, pass_face);
   }
 
   void on_theme() override {
-    ui::set_color(hint_, theme::MUTED);
-    ui::set_color(pass_, theme::INK);
+    ui::set_color(words_, ok_ ? theme::INK : theme::MUTED);
     lv_obj_invalidate(code_);
   }
 
@@ -325,7 +303,7 @@ class CodeCard : public tessera::Card {
   int module_ = 1;
   int seconds_left_ = 0;
   uint8_t qr_[wqr_BUFFER_LEN_FOR_VERSION(MAX_VERSION)];
-  lv_obj_t *code_{}, *hint_{}, *pass_{};
+  lv_obj_t *code_{}, *words_{};
 };
 
 void WifiQr::setup() {

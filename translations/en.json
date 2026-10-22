@@ -5,7 +5,6 @@
     "card_title": "Wi-Fi Network: {name}",
     "no_network": "Choose a network",
     "tap_to_show": "Tap for the code",
-    "scan": "Scan with your phone's camera to join",
     "password": "Password: {password}",
     "open_network": "No password needed",
     "too_long": "Too long for a code"

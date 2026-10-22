@@ -5,7 +5,6 @@
     "card_title": "Wifinetwerk: {name}",
     "no_network": "Kies een netwerk",
     "tap_to_show": "Tik voor de code",
-    "scan": "Scan met de camera van je telefoon",
     "password": "Wachtwoord: {password}",
     "open_network": "Geen wachtwoord nodig",
     "too_long": "Te lang voor een code"

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.2
+- The code stands in the middle of the card, with only the password under it: no more "Scan with your phone's
+  camera to join", and no more code on the left with the words beside it on a wide screen.
+
 ## 0.4.1
 - In the layout editor the tile's placeholder says "Tap for the code", as the tile on the screen does.
 
