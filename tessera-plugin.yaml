@@ -1,0 +1,43 @@
+# The manifest: who made the plugin, what it may do, and what the Tessera app shows. It holds no code and no words:
+# every name, label and hint below is a key into translations/<language>.json, part "app".
+# Every field is explained in docs/MANIFEST.md of the plugins repository.
+id: wifi_qr
+version: 0.1.0
+# 0.10: tessera::Text and tiles and cards made in PSRAM; the card itself is of 0.2.
+api: "0.10"
+icon: wifi
+maintainer: MarkNBroadhead
+license: MIT
+stage: beta
+topics: [home, tech]
+requires:
+  esphome: 2026.6.2
+boards: any
+flash_kb: 10
+
+tiles:
+  # A tile with a network's name; a tap opens the card with the code a phone's camera reads to join it. It draws on
+  # the screen alone: no Home Assistant entity, no data from the internet.
+  - id: network
+    name: tile_name
+    icon: wifi
+    sizes: { min: 1x1, max: 2x2 }
+    memory: 500
+    example: tile_example
+    options:
+      - { id: ssid, kind: text, label: ssid, hint: ssid_hint }
+      - { id: password, kind: text, label: password, hint: password_hint }
+      - id: security
+        kind: choice
+        label: security
+        hint: security_hint
+        default: WPA
+        choices:
+          - { value: WPA, label: security_wpa }
+          - { value: WEP, label: security_wep }
+          - { value: nopass, label: security_none }
+      - { id: hidden, kind: toggle, default: false, label: hidden, hint: hidden_hint }
+      - { id: show_password, kind: toggle, default: true, label: show_password, hint: show_password_hint }
+
+cards:
+  - { id: code, name: card_name, wide: true }

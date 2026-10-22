@@ -1,0 +1,13 @@
+# What tools/preview.py shows: the tile on every kind of screen (docs/PREVIEW.md of the plugins repository).
+# Never put a real password here.
+tiles:
+  - tile: network
+    name: Guest Wi-Fi
+    options: { ssid: Guest Wi-Fi, password: welcome-home }
+  - tile: network
+    name: Garden
+    options: { ssid: Garden, security: nopass }
+    sizes: [1x1]
+  - tile: network
+    name: No network yet
+    sizes: [2x1]

@@ -1,0 +1,31 @@
+{
+  "_meta": { "name": "Nederlands" },
+  "screen": {
+    "no_network": "Kies een netwerk",
+    "tap_to_show": "Tik voor de code",
+    "scan": "Scan met de camera van je telefoon",
+    "password": "Wachtwoord: {password}",
+    "open_network": "Geen wachtwoord nodig",
+    "too_long": "Te lang voor een code"
+  },
+  "app": {
+    "name": "Wifi-code",
+    "summary": "Een tegel met een QR-code over het hele scherm waarmee gasten op je wifi komen.",
+    "tile_name": "Wifi-code",
+    "tile_example": "Tik voor de code van Gasten-wifi",
+    "card_name": "Wifi-code",
+    "ssid": "Netwerknaam",
+    "ssid_hint": "De naam van het wifi-netwerk (SSID), zoals telefoons hem tonen.",
+    "password": "Wachtwoord",
+    "password_hint": "Laat leeg voor een open netwerk. Het staat in de indeling van het scherm, zoals elke optie.",
+    "security": "Beveiliging",
+    "security_hint": "WPA geldt voor WPA, WPA2 en WPA3.",
+    "security_wpa": "WPA / WPA2 / WPA3",
+    "security_wep": "WEP",
+    "security_none": "Geen (open)",
+    "hidden": "Verborgen netwerk",
+    "hidden_hint": "Aan als het netwerk zijn naam niet uitzendt.",
+    "show_password": "Wachtwoord tonen",
+    "show_password_hint": "Zet het wachtwoord onder de code, voor een laptop of een telefoon zonder camera."
+  }
+}

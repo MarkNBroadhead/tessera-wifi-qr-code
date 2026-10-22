@@ -1,0 +1,257 @@
+#include "wifi_qr.h"
+#include "wqr_qrcodegen.h"
+#include <algorithm>
+#include <cstdio>
+#include <cstring>
+#include <initializer_list>
+#include <string>
+
+namespace esphome::wifi_qr {
+
+using tessera::Font;
+namespace ui = tessera::ui;
+
+static constexpr uint32_t WIFI_ICON = 0xF0928;  // wifi-strength-4, of Tessera's set
+// Version 15 holds the longest network the options allow (two values of 64 characters, every one escaped) at the
+// medium level of error correction; a usual one is a version 3 or 4, and the encoder picks the smallest that fits.
+static constexpr int MAX_VERSION = 15;
+static constexpr int QUIET = 4;  // the light border a reader needs around the code, in modules
+
+static void copy_text(char *to, size_t size, const char *from) { snprintf(to, size, "%s", from ? from : ""); }
+
+// A value of the WIFI: text, with the characters the format reserves escaped.
+static void escape_into(std::string &out, const char *value) {
+  for (const char *p = value; *p; ++p) {
+    if (strchr("\\;,:\"", *p)) out += '\\';
+    out += *p;
+  }
+}
+
+// What a phone's camera reads as "join this network": WIFI:T:WPA;S:<name>;P:<password>;H:true;;
+static std::string wifi_text(const WifiQr::Network &n) {
+  std::string t = "WIFI:T:";
+  t += n.security;
+  t += ";S:";
+  escape_into(t, n.ssid);
+  t += ';';
+  if (strcmp(n.security, "nopass") != 0) {
+    t += "P:";
+    escape_into(t, n.password);
+    t += ';';
+  }
+  if (n.hidden) t += "H:true;";
+  t += ';';
+  return t;
+}
+
+// The largest of `faces` the text fits in at `width`, else the last.
+static Font fitting(const std::string &text, int width, std::initializer_list<Font> faces) {
+  Font face = *faces.begin();
+  for (Font f : faces) {
+    face = f;
+    if (ui::text_width(text, f) <= width) break;
+  }
+  return face;
+}
+
+static void place(lv_obj_t *label, int x, int y, int width, Font face) {
+  lv_obj_set_pos(label, x, y);
+  lv_obj_set_size(label, width, ui::line_height(face));
+  lv_obj_set_style_text_align(label, LV_TEXT_ALIGN_CENTER, 0);
+}
+
+// The tile: the Wi-Fi icon, the network's name and what a tap does. It draws once; nothing on it changes.
+class NetworkTile : public tessera::Tile {
+ public:
+  explicit NetworkTile(WifiQr *plugin) : plugin_(plugin) {}
+
+  void create(const tessera::TileContext &c) override {
+    tile_ = c.tile;
+    copy_text(net_.ssid, sizeof net_.ssid, c.options["ssid"] | "");
+    copy_text(net_.password, sizeof net_.password, c.options["password"] | "");
+    const char *security = c.options["security"] | "WPA";
+    // A network without a password is an open one, whatever the choice says.
+    if (!net_.password[0] || strcmp(security, "nopass") == 0) security = "nopass";
+    else if (strcmp(security, "WEP") != 0) security = "WPA";
+    copy_text(net_.security, sizeof net_.security, security);
+    net_.hidden = c.options["hidden"] | false;
+    net_.show_password = c.options["show_password"] | true;
+
+    const int w = c.width, h = c.height;
+    const std::string name = net_.ssid[0] ? std::string(net_.ssid) : std::string(plugin_->text("no_network"));
+    const std::string hint = net_.ssid[0] ? std::string(plugin_->text("tap_to_show")) : std::string();
+    const Font name_face = fitting(name, w, {Font::TITLE, Font::BODY_LARGE, Font::BODY});
+
+    icon_ = ui::label(c.parent, Font::ICON, theme::ACCENT);
+    name_ = ui::label(c.parent, name_face, theme::INK);
+    hint_ = ui::label(c.parent, Font::BODY, theme::MUTED);
+    ui::set_text(icon_, ui::icon(WIFI_ICON));
+    ui::set_text(name_, name);
+    ui::set_text(hint_, hint);
+
+    // The three lines together in the middle of the card; on a card too low for them the hint goes first, the icon next.
+    const int gap = ui::px(4);
+    const int ih = ui::line_height(Font::ICON), nh = ui::line_height(name_face), hh = ui::line_height(Font::BODY);
+    bool show_icon = true, show_hint = !hint.empty();
+    auto total = [&]() { return (show_icon ? ih + gap : 0) + nh + (show_hint ? hh : 0); };
+    if (total() > h) show_hint = false;
+    if (total() > h) show_icon = false;
+    int y = std::max(0, (h - total()) / 2);
+    if (show_icon) {
+      place(icon_, 0, y, w, Font::ICON);
+      y += ih + gap;
+    } else {
+      lv_obj_add_flag(icon_, LV_OBJ_FLAG_HIDDEN);
+    }
+    place(name_, 0, y, w, name_face);
+    y += nh;
+    if (show_hint) place(hint_, 0, y, w, Font::BODY);
+    else lv_obj_add_flag(hint_, LV_OBJ_FLAG_HIDDEN);
+  }
+
+  void on_theme() override {
+    ui::set_color(icon_, theme::ACCENT);
+    ui::set_color(name_, theme::INK);
+    ui::set_color(hint_, theme::MUTED);
+  }
+
+  // The card with the code, over the whole width of the glass, named after the network.
+  void on_tap() override {
+    if (!net_.ssid[0]) return;
+    plugin_->next = net_;
+    tessera::open_card(plugin_->plugin_id(), "code", "", tile_, net_.ssid);
+  }
+
+ private:
+  WifiQr *plugin_;
+  int tile_ = -1;
+  WifiQr::Network net_{};
+  lv_obj_t *icon_{}, *name_{}, *hint_{};
+};
+
+// The card: the code as large as the room allows, with what to do and the password beside or under it.
+// A tap anywhere closes it, as Back does.
+class CodeCard : public tessera::Card {
+ public:
+  explicit CodeCard(WifiQr *plugin) : plugin_(plugin) {}
+
+  void open(const tessera::CardContext &c) override {
+    net_ = plugin_->next;
+    ok_ = wqr_encodeText(wifi_text(net_).c_str(), temp_, qr_, wqr_Ecc_MEDIUM, wqr_VERSION_MIN, MAX_VERSION,
+                         wqr_Mask_AUTO, true);
+
+    const int w = c.width, h = c.height, gap = ui::px(12);
+    std::string hint = plugin_->text(ok_ ? "scan" : "too_long"), pass;
+    if (ok_ && net_.show_password) {
+      pass = strcmp(net_.security, "nopass") == 0 ? std::string(plugin_->text("open_network"))
+                                                   : tessera::fill(plugin_->text("password"), "password", net_.password);
+    }
+
+    // Wide glass: the code on the left half, the words in the middle of the right. Otherwise the words under the code.
+    const bool beside = w > h * 4 / 3;
+    const int text_w = beside ? w / 2 - gap : w;
+    const Font hint_face = fitting(hint, text_w, {Font::BODY_LARGE, Font::BODY});
+    const Font pass_face = fitting(pass, text_w, {Font::HEADLINE, Font::TITLE, Font::BODY_LARGE, Font::BODY});
+    const int hint_h = ui::line_height(hint_face), pass_h = pass.empty() ? 0 : gap / 2 + ui::line_height(pass_face);
+    const int words_h = hint_h + pass_h;
+
+    int box = beside ? std::min(h, w / 2) - gap : std::min(w, h - words_h - gap);
+    int code_x, code_y, words_x, words_y;
+    if (beside) {
+      code_x = (w / 2 - box) / 2;
+      code_y = (h - box) / 2;
+      words_x = w / 2;
+      words_y = (h - words_h) / 2;
+    } else {
+      code_x = (w - box) / 2;
+      code_y = std::max(0, (h - box - gap - words_h) / 2);
+      words_x = 0;
+      words_y = code_y + box + gap;
+    }
+
+    // Whole pixels for each module, or a phone sees blurred edges; the code then sits in the middle of its box.
+    const int modules = ok_ ? wqr_getSize(qr_) + 2 * QUIET : 1;
+    module_ = std::max(1, box / modules);
+    const int side = module_ * modules;
+    code_ = lv_obj_create(c.parent);
+    lv_obj_remove_style_all(code_);
+    lv_obj_remove_flag(code_, LV_OBJ_FLAG_CLICKABLE);  // a tap on the code is the card's, which closes
+    lv_obj_remove_flag(code_, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_pos(code_, code_x + (box - side) / 2, code_y + (box - side) / 2);
+    lv_obj_set_size(code_, side, side);
+    if (ok_) lv_obj_add_event_cb(code_, paint_code, LV_EVENT_DRAW_MAIN, this);
+    else lv_obj_add_flag(code_, LV_OBJ_FLAG_HIDDEN);
+
+    hint_ = ui::label(c.parent, hint_face, theme::MUTED);
+    ui::set_text(hint_, hint);
+    if (!ok_) words_y = (h - hint_h) / 2;
+    place(hint_, words_x, words_y, text_w, hint_face);
+    pass_ = ui::label(c.parent, pass_face, theme::INK);
+    ui::set_text(pass_, pass);
+    if (pass.empty()) lv_obj_add_flag(pass_, LV_OBJ_FLAG_HIDDEN);
+    else place(pass_, words_x, words_y + hint_h + gap / 2, text_w, pass_face);
+  }
+
+  void on_theme() override {
+    ui::set_color(hint_, theme::MUTED);
+    ui::set_color(pass_, theme::INK);
+    lv_obj_invalidate(code_);
+  }
+
+  void on_tap() override { tessera::close_card(); }
+
+ private:
+  static void paint_code(lv_event_t *e) {
+    static_cast<CodeCard *>(lv_event_get_user_data(e))->paint(lv_event_get_layer(e));
+  }
+
+  // Dark modules on a light plate in both looks: many phones do not read a code the other way round. The darker of
+  // the ink and the card's colour is the module, the lighter the plate.
+  void paint(lv_layer_t *layer) {
+    lv_area_t area;
+    lv_obj_get_coords(code_, &area);
+    const lv_color_t ink = ui::color(theme::INK), card = ui::color(theme::CARD);
+    const bool ink_dark = lv_color_luminance(ink) < lv_color_luminance(card);
+    lv_draw_rect_dsc_t d;
+    lv_draw_rect_dsc_init(&d);
+    d.bg_opa = LV_OPA_COVER;
+    d.bg_color = ink_dark ? card : ink;
+    d.radius = module_;
+    lv_draw_rect(layer, &d, &area);
+    // Each run of dark modules in a row is one rectangle: a few hundred for a usual code.
+    d.bg_color = ink_dark ? ink : card;
+    d.radius = 0;
+    const int size = wqr_getSize(qr_);
+    for (int y = 0; y < size; y++) {
+      for (int x = 0; x < size;) {
+        if (!wqr_getModule(qr_, x, y)) {
+          x++;
+          continue;
+        }
+        const int start = x;
+        while (x < size && wqr_getModule(qr_, x, y)) x++;
+        lv_area_t run;
+        run.x1 = area.x1 + (QUIET + start) * module_;
+        run.y1 = area.y1 + (QUIET + y) * module_;
+        run.x2 = area.x1 + (QUIET + x) * module_ - 1;
+        run.y2 = run.y1 + module_ - 1;
+        lv_draw_rect(layer, &d, &run);
+      }
+    }
+  }
+
+  WifiQr *plugin_;
+  WifiQr::Network net_{};
+  bool ok_ = false;
+  int module_ = 1;
+  uint8_t qr_[wqr_BUFFER_LEN_FOR_VERSION(MAX_VERSION)];
+  uint8_t temp_[wqr_BUFFER_LEN_FOR_VERSION(MAX_VERSION)];
+  lv_obj_t *code_{}, *hint_{}, *pass_{};
+};
+
+void WifiQr::setup() {
+  add_tile("network", [this]() { return new NetworkTile(this); });
+  add_card("code", [this]() { return new CodeCard(this); }, true);
+}
+
+}  // namespace esphome::wifi_qr

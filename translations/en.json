@@ -1,0 +1,31 @@
+{
+  "_meta": { "name": "English" },
+  "screen": {
+    "no_network": "Choose a network",
+    "tap_to_show": "Tap for the code",
+    "scan": "Scan with your phone's camera to join",
+    "password": "Password: {password}",
+    "open_network": "No password needed",
+    "too_long": "Too long for a code"
+  },
+  "app": {
+    "name": "Wi-Fi code",
+    "summary": "A tile that shows a full-screen QR code your guests scan to join your Wi-Fi.",
+    "tile_name": "Wi-Fi code",
+    "tile_example": "Tap to show the code for Guest Wi-Fi",
+    "card_name": "Wi-Fi code",
+    "ssid": "Network name",
+    "ssid_hint": "The name of the Wi-Fi network (SSID), as phones list it.",
+    "password": "Password",
+    "password_hint": "Leave it empty for an open network. It is kept in the screen's layout, like every option.",
+    "security": "Security",
+    "security_hint": "WPA covers WPA, WPA2 and WPA3.",
+    "security_wpa": "WPA / WPA2 / WPA3",
+    "security_wep": "WEP",
+    "security_none": "None (open)",
+    "hidden": "Hidden network",
+    "hidden_hint": "On when the network does not broadcast its name.",
+    "show_password": "Show the password",
+    "show_password_hint": "Write the password under the code, for a laptop or a phone without a camera."
+  }
+}
