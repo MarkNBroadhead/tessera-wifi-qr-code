@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.3.3
+- The plugin and its tile are called Wi-Fi QR Code.
+
 ## 0.3.2
 - The card's title says what it is: "Wi-Fi Network: " before the network's name.
 

@@ -11,11 +11,11 @@
     "too_long": "Te lang voor een code"
   },
   "app": {
-    "name": "Wifi-code",
+    "name": "Wifi-QR-code",
     "summary": "Een tegel met een QR-code over het hele scherm waarmee gasten op je wifi komen.",
-    "tile_name": "Wifi-code",
+    "tile_name": "Wifi-QR-code",
     "tile_example": "Tik voor de code van Gasten-wifi",
-    "card_name": "Wifi-code",
+    "card_name": "Wifi-QR-code",
     "ssid": "Netwerknaam",
     "ssid_hint": "De naam van het wifi-netwerk (SSID), zoals telefoons hem tonen.",
     "password": "Wachtwoord",

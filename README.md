@@ -1,4 +1,4 @@
-# Wi-Fi code
+# Wi-Fi QR Code
 
 A tile with your Wi-Fi network's name. Tap it and the screen shows a large QR code over its whole width: a guest
 points their phone's camera at it and joins the network, without typing the password.
@@ -6,7 +6,7 @@ points their phone's camera at it and joins the network, without typing the pass
 ## Set up
 
 1. Add the plugin to a screen in Tessera. The screen builds once.
-2. In Layout, place the **Wi-Fi code** tile from the library's Plugins group.
+2. In Layout, place the **Wi-Fi QR Code** tile from the library's Plugins group.
 3. In the inspector, fill in the network name and the password, and choose the security (WPA for almost every home
    network). Leave the password empty for an open network.
 4. Tap the tile on the screen. Tap the code, or Back, to close it.

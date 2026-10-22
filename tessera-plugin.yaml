@@ -2,7 +2,7 @@
 # every name, label and hint below is a key into translations/<language>.json, part "app".
 # Every field is explained in docs/MANIFEST.md of the plugins repository.
 id: wifi_qr
-version: 0.3.2
+version: 0.3.3
 # 0.10: tessera::Text and tiles and cards made in PSRAM; the card itself is of 0.2.
 api: "0.10"
 icon: wifi
