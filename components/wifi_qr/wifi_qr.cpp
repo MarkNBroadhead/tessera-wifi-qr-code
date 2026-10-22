@@ -93,6 +93,8 @@ class NetworkTile : public tessera::Tile {
     snprintf(net_.security, sizeof net_.security, "%s", security);
     net_.hidden = c.options["hidden"] | false;
     net_.show_password = c.options["show_password"] | true;
+    // A number option may come as 60 or 60.0; a float reads both.
+    net_.close_after = std::max(0, static_cast<int>(c.options["close_after"] | 60.0f));
 
     const int w = c.width, h = c.height;
     // Each line is the person's own words when they wrote some, else Tessera's: the title, the network's name and
@@ -181,6 +183,7 @@ class CodeCard : public tessera::Card {
 
   void open(const tessera::CardContext &c) override {
     const WifiQr::Network &net = plugin_->next;
+    seconds_left_ = net.close_after;
     {
       uint8_t temp[wqr_BUFFER_LEN_FOR_VERSION(MAX_VERSION)];  // the encoder's room, needed only while it works
       ok_ = wqr_encodeText(wifi_text(net).c_str(), temp, qr_, wqr_Ecc_MEDIUM, wqr_VERSION_MIN, MAX_VERSION,
@@ -267,6 +270,11 @@ class CodeCard : public tessera::Card {
 
   void on_tap() override { tessera::close_card(); }
 
+  // Once a second while open: the card closes by itself when the tile's time is up (0: it waits for Back or a tap).
+  void on_tick(uint32_t epoch) override {
+    if (seconds_left_ > 0 && --seconds_left_ == 0) tessera::close_card();
+  }
+
  private:
   static void paint_code(lv_event_t *e) {
     static_cast<CodeCard *>(lv_event_get_user_data(e))->paint(lv_event_get_layer(e));
@@ -315,6 +323,7 @@ class CodeCard : public tessera::Card {
   WifiQr *plugin_;
   bool ok_ = false;
   int module_ = 1;
+  int seconds_left_ = 0;
   uint8_t qr_[wqr_BUFFER_LEN_FOR_VERSION(MAX_VERSION)];
   lv_obj_t *code_{}, *hint_{}, *pass_{};
 };

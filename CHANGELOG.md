@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.0
+- The code closes by itself after a time you choose: Close the code after, in the tile's options (60 seconds
+  unless you change it; 0 keeps it open until Back or a tap).
+
 ## 0.3.3
 - The plugin and its tile are called Wi-Fi QR Code.
 

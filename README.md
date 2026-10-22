@@ -23,6 +23,8 @@ points their phone's camera at it and joins the network, without typing the pass
   Turn off **Show the top line** (or the middle or bottom one) to hide it; the lines left move to the middle.
 - The screen's fonts have no emoji: a name such as "😍 Home" shows as "Home" on the tile and the card, while the code
   holds the whole name, emoji and all.
+- The code closes by itself after a minute; change that in **Close the code after** (0 keeps it open until Back or a
+  tap). The screen's own standby closes it too.
 - Turn off **Show the password** to show only the code, without the password written under it.
 - It uses nothing outside the screen: no Home Assistant entity and no internet service.
 

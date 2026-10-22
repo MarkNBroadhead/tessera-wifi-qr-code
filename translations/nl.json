@@ -29,6 +29,8 @@
     "hidden_hint": "Aan als het netwerk zijn naam niet uitzendt.",
     "show_password": "Wachtwoord tonen",
     "show_password_hint": "Zet het wachtwoord onder de code, voor een laptop of een telefoon zonder camera.",
+    "close_after": "Code sluiten na",
+    "close_after_hint": "Seconden dat de code op het scherm blijft voor hij vanzelf sluit. 0 houdt hem tot Terug of een tik.",
     "top_line": "Bovenste regel",
     "top_line_hint": "Kleine woorden boven de naam. Leeg: Wifi-QR-code.",
     "middle_line": "Middelste regel",

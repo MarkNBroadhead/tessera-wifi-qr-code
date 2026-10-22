@@ -29,6 +29,8 @@
     "hidden_hint": "On when the network does not broadcast its name.",
     "show_password": "Show the password",
     "show_password_hint": "Write the password under the code, for a laptop or a phone without a camera.",
+    "close_after": "Close the code after",
+    "close_after_hint": "Seconds the code stays on the screen before it closes by itself. 0 keeps it until Back or a tap.",
     "top_line": "Top line",
     "top_line_hint": "Small words above the name. Empty: Wi-Fi QR code.",
     "middle_line": "Middle line",

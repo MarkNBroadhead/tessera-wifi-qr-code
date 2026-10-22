@@ -18,6 +18,7 @@ class WifiQr : public Component, public tessera::Plugin {
     char security[8];   // WPA, WEP or nopass, as a phone reads it in the code
     bool hidden;
     bool show_password;
+    int close_after;    // seconds the card stays open, 0 until Back or a tap
   };
   Network next{};
 };
