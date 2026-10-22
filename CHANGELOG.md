@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.3
+- A network name too long for the card's top bar leaves the title out, instead of cutting it with dots.
+- On a low screen the password always shows when Show the password is on; the code is made smaller to fit it.
+
 ## 0.4.2
 - The code stands in the middle of the card, with only the password under it: no more "Scan with your phone's
   camera to join", and no more code on the left with the words beside it on a wide screen.

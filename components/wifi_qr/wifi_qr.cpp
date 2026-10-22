@@ -15,7 +15,6 @@ namespace ui = tessera::ui;
 // correction, far more than a real network (a name of 32 bytes, a password of 63); a usual one is a version 3 or 4,
 // and the encoder picks the smallest that fits. A longer text shows "too_long" instead of a code.
 static constexpr int MAX_VERSION = 12;
-static constexpr int MIN_MODULE = 2;  // pixels a module, at least: fewer and a phone cannot read the code
 static constexpr int QUIET = 4;  // the light border a reader needs around the code, in modules
 
 // A value of the WIFI: text, with the characters the format reserves escaped.
@@ -164,7 +163,11 @@ class NetworkTile : public tessera::Tile {
     plugin_->next = net_;
     // The card's top bar writes its title in Tessera's own font; a name of only emoji leaves it to the tile's name.
     const std::string name = drawable(roomy::plain(net_.ssid), Font::TITLE);
-    const std::string title = name.empty() ? std::string() : tessera::fill(plugin_->text("card_title"), "name", name);
+    std::string title = name.empty() ? std::string() : tessera::fill(plugin_->text("card_title"), "name", name);
+    // A title too long for the bar is left out whole, rather than cut with dots: the bar holds it between the back key
+    // and as much room again on the right, so it stays in the middle.
+    const int bar = lv_display_get_horizontal_resolution(lv_display_get_default()) - 2 * (ui::mm(12) + ui::px(16));
+    if (!title.empty() && ui::text_width(title, Font::TITLE) > bar) title = " ";
     tessera::open_card(plugin_->plugin_id(), "code", "", tile_, title);
   }
 
@@ -209,14 +212,10 @@ class CodeCard : public tessera::Card {
     }
     if (!pass_fits) pass.clear();
 
-    // The code in the middle of the room, the password under it; on a room too low for both the password goes, so
-    // the code keeps whole modules a phone can read.
+    // The code in the middle of the room, the password under it; on a low room the code is smaller, never the password
+    // gone.
     const int modules = ok_ ? wqr_getSize(qr_) + 2 * QUIET : 1;
-    int pass_h = pass.empty() ? 0 : gap + ui::line_height(pass_face);
-    if (pass_h && std::min(w, h - pass_h) < modules * MIN_MODULE) {
-      pass.clear();
-      pass_h = 0;
-    }
+    const int pass_h = pass.empty() ? 0 : gap + ui::line_height(pass_face);
     const int box = std::min(w, h - pass_h);
 
     // Whole pixels for each module, or a phone sees blurred edges.
