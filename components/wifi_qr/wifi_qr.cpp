@@ -12,18 +12,18 @@ using tessera::Font;
 namespace ui = tessera::ui;
 
 static constexpr uint32_t WIFI_ICON = 0xF0928;  // wifi-strength-4, of Tessera's set
-// Version 15 holds the longest network the options allow (two values of 64 characters, every one escaped) at the
-// medium level of error correction; a usual one is a version 3 or 4, and the encoder picks the smallest that fits.
-static constexpr int MAX_VERSION = 15;
+// Version 12 holds two values of 64 plain characters with every one escaped (281 bytes) at the medium level of error
+// correction, far more than a real network (a name of 32 bytes, a password of 63); a usual one is a version 3 or 4,
+// and the encoder picks the smallest that fits. A longer text shows "too_long" instead of a code.
+static constexpr int MAX_VERSION = 12;
+static constexpr int MIN_MODULE = 2;  // pixels a module, at least: fewer and a phone cannot read the code
 static constexpr int QUIET = 4;  // the light border a reader needs around the code, in modules
 
-static void copy_text(char *to, size_t size, const char *from) { snprintf(to, size, "%s", from ? from : ""); }
-
 // A value of the WIFI: text, with the characters the format reserves escaped.
-static void escape_into(std::string &out, const char *value) {
-  for (const char *p = value; *p; ++p) {
-    if (strchr("\\;,:\"", *p)) out += '\\';
-    out += *p;
+static void escape_into(std::string &out, const tessera::Text &value) {
+  for (const char ch : value) {
+    if (strchr("\\;,:\"", ch)) out += '\\';
+    out += ch;
   }
 }
 
@@ -67,19 +67,20 @@ class NetworkTile : public tessera::Tile {
 
   void create(const tessera::TileContext &c) override {
     tile_ = c.tile;
-    copy_text(net_.ssid, sizeof net_.ssid, c.options["ssid"] | "");
-    copy_text(net_.password, sizeof net_.password, c.options["password"] | "");
+    net_.ssid = c.options["ssid"] | "";
+    net_.password = c.options["password"] | "";
     const char *security = c.options["security"] | "WPA";
     // A network without a password is an open one, whatever the choice says.
-    if (!net_.password[0] || strcmp(security, "nopass") == 0) security = "nopass";
+    if (net_.password.empty() || strcmp(security, "nopass") == 0) security = "nopass";
     else if (strcmp(security, "WEP") != 0) security = "WPA";
-    copy_text(net_.security, sizeof net_.security, security);
+    snprintf(net_.security, sizeof net_.security, "%s", security);
     net_.hidden = c.options["hidden"] | false;
     net_.show_password = c.options["show_password"] | true;
 
     const int w = c.width, h = c.height;
-    const std::string name = net_.ssid[0] ? std::string(net_.ssid) : std::string(plugin_->text("no_network"));
-    const std::string hint = net_.ssid[0] ? std::string(plugin_->text("tap_to_show")) : std::string();
+    const bool has_ssid = !net_.ssid.empty();
+    const std::string name = has_ssid ? roomy::plain(net_.ssid) : std::string(plugin_->text("no_network"));
+    const std::string hint = has_ssid ? std::string(plugin_->text("tap_to_show")) : std::string();
     const Font name_face = fitting(name, w, {Font::TITLE, Font::BODY_LARGE, Font::BODY});
 
     icon_ = ui::label(c.parent, Font::ICON, theme::ACCENT);
@@ -117,9 +118,9 @@ class NetworkTile : public tessera::Tile {
 
   // The card with the code, over the whole width of the glass, named after the network.
   void on_tap() override {
-    if (!net_.ssid[0]) return;
+    if (net_.ssid.empty()) return;
     plugin_->next = net_;
-    tessera::open_card(plugin_->plugin_id(), "code", "", tile_, net_.ssid);
+    tessera::open_card(plugin_->plugin_id(), "code", "", tile_, roomy::plain(net_.ssid));
   }
 
  private:
@@ -136,26 +137,49 @@ class CodeCard : public tessera::Card {
   explicit CodeCard(WifiQr *plugin) : plugin_(plugin) {}
 
   void open(const tessera::CardContext &c) override {
-    net_ = plugin_->next;
-    ok_ = wqr_encodeText(wifi_text(net_).c_str(), temp_, qr_, wqr_Ecc_MEDIUM, wqr_VERSION_MIN, MAX_VERSION,
-                         wqr_Mask_AUTO, true);
+    const WifiQr::Network &net = plugin_->next;
+    {
+      uint8_t temp[wqr_BUFFER_LEN_FOR_VERSION(MAX_VERSION)];  // the encoder's room, needed only while it works
+      ok_ = wqr_encodeText(wifi_text(net).c_str(), temp, qr_, wqr_Ecc_MEDIUM, wqr_VERSION_MIN, MAX_VERSION,
+                           wqr_Mask_AUTO, true);
+    }
 
     const int w = c.width, h = c.height, gap = ui::px(12);
     std::string hint = plugin_->text(ok_ ? "scan" : "too_long"), pass;
-    if (ok_ && net_.show_password) {
-      pass = strcmp(net_.security, "nopass") == 0 ? std::string(plugin_->text("open_network"))
-                                                   : tessera::fill(plugin_->text("password"), "password", net_.password);
+    if (ok_ && net.show_password) {
+      pass = strcmp(net.security, "nopass") == 0
+                 ? std::string(plugin_->text("open_network"))
+                 : tessera::fill(plugin_->text("password"), "password", roomy::plain(net.password));
     }
 
     // Wide glass: the code on the left half, the words in the middle of the right. Otherwise the words under the code.
     const bool beside = w > h * 4 / 3;
     const int text_w = beside ? w / 2 - gap : w;
     const Font hint_face = fitting(hint, text_w, {Font::BODY_LARGE, Font::BODY});
-    const Font pass_face = fitting(pass, text_w, {Font::HEADLINE, Font::TITLE, Font::BODY_LARGE, Font::BODY});
-    const int hint_h = ui::line_height(hint_face), pass_h = pass.empty() ? 0 : gap / 2 + ui::line_height(pass_face);
+    // The largest font that has every character of the password; one the screen cannot write is left out, rather than
+    // shown with letters missing that a guest would then type wrong. The code holds it whole either way.
+    Font pass_face = Font::BODY;
+    bool pass_fits = false;
+    for (Font f : {Font::HEADLINE, Font::TITLE, Font::BODY_LARGE, Font::BODY}) {
+      if (!ui::covers(pass, f)) continue;
+      pass_face = f;
+      pass_fits = true;
+      if (ui::text_width(pass, f) <= text_w) break;
+    }
+    if (!pass_fits) pass.clear();
+
+    const int modules = ok_ ? wqr_getSize(qr_) + 2 * QUIET : 1;
+    int hint_h = ui::line_height(hint_face), pass_h = pass.empty() ? 0 : gap / 2 + ui::line_height(pass_face);
+    // Under the code on a low room: the password goes first, then the hint, so the code keeps whole modules a phone
+    // can read.
+    if (!beside && ok_ && std::min(w, h - hint_h - pass_h - gap) < modules * MIN_MODULE) {
+      pass.clear();
+      pass_h = 0;
+      if (std::min(w, h - hint_h - gap) < modules * MIN_MODULE) hint_h = 0;
+    }
     const int words_h = hint_h + pass_h;
 
-    int box = beside ? std::min(h, w / 2) - gap : std::min(w, h - words_h - gap);
+    int box = beside ? std::min(h, w / 2) - gap : std::min(w, h - words_h - (words_h ? gap : 0));
     int code_x, code_y, words_x, words_y;
     if (beside) {
       code_x = (w / 2 - box) / 2;
@@ -170,7 +194,6 @@ class CodeCard : public tessera::Card {
     }
 
     // Whole pixels for each module, or a phone sees blurred edges; the code then sits in the middle of its box.
-    const int modules = ok_ ? wqr_getSize(qr_) + 2 * QUIET : 1;
     module_ = std::max(1, box / modules);
     const int side = module_ * modules;
     code_ = lv_obj_create(c.parent);
@@ -185,7 +208,8 @@ class CodeCard : public tessera::Card {
     hint_ = ui::label(c.parent, hint_face, theme::MUTED);
     ui::set_text(hint_, hint);
     if (!ok_) words_y = (h - hint_h) / 2;
-    place(hint_, words_x, words_y, text_w, hint_face);
+    if (hint_h) place(hint_, words_x, words_y, text_w, hint_face);
+    else lv_obj_add_flag(hint_, LV_OBJ_FLAG_HIDDEN);
     pass_ = ui::label(c.parent, pass_face, theme::INK);
     ui::set_text(pass_, pass);
     if (pass.empty()) lv_obj_add_flag(pass_, LV_OBJ_FLAG_HIDDEN);
@@ -218,11 +242,16 @@ class CodeCard : public tessera::Card {
     d.bg_color = ink_dark ? card : ink;
     d.radius = module_;
     lv_draw_rect(layer, &d, &area);
-    // Each run of dark modules in a row is one rectangle: a few hundred for a usual code.
+    // Each run of dark modules in a row is one rectangle: a few hundred for a usual code. The glass is drawn in strips,
+    // so only the rows of the strip being drawn.
     d.bg_color = ink_dark ? ink : card;
     d.radius = 0;
     const int size = wqr_getSize(qr_);
-    for (int y = 0; y < size; y++) {
+    const lv_area_t clip = layer->_clip_area;
+    const int top = area.y1 + QUIET * module_;
+    const int first = std::max(0, (static_cast<int>(clip.y1) - top) / module_);
+    const int last = std::min(size - 1, (static_cast<int>(clip.y2) - top) / module_);
+    for (int y = first; y <= last; y++) {
       for (int x = 0; x < size;) {
         if (!wqr_getModule(qr_, x, y)) {
           x++;
@@ -241,11 +270,9 @@ class CodeCard : public tessera::Card {
   }
 
   WifiQr *plugin_;
-  WifiQr::Network net_{};
   bool ok_ = false;
   int module_ = 1;
   uint8_t qr_[wqr_BUFFER_LEN_FOR_VERSION(MAX_VERSION)];
-  uint8_t temp_[wqr_BUFFER_LEN_FOR_VERSION(MAX_VERSION)];
   lv_obj_t *code_{}, *hint_{}, *pass_{};
 };
 

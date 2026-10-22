@@ -11,9 +11,10 @@ class WifiQr : public Component, public tessera::Plugin {
   float get_setup_priority() const override { return setup_priority::DATA; }
 
   // What the card shows next: the tile that was tapped hands it over just before it opens the card, which copies it.
+  // The name and password as Text, whole: an option of 64 characters may be more bytes than that.
   struct Network {
-    char ssid[65];
-    char password[65];
+    tessera::Text ssid;
+    tessera::Text password;
     char security[8];   // WPA, WEP or nopass, as a phone reads it in the code
     bool hidden;
     bool show_password;
