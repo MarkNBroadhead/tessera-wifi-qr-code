@@ -2,6 +2,7 @@
   "_meta": { "name": "Nederlands" },
   "screen": {
     "title": "Wifi-QR-code",
+    "card_title": "Wifinetwerk: {name}",
     "no_network": "Kies een netwerk",
     "tap_to_show": "Tik voor de code",
     "scan": "Scan met de camera van je telefoon",

@@ -161,7 +161,9 @@ class NetworkTile : public tessera::Tile {
     if (net_.ssid.empty()) return;
     plugin_->next = net_;
     // The card's top bar writes its title in Tessera's own font; a name of only emoji leaves it to the tile's name.
-    tessera::open_card(plugin_->plugin_id(), "code", "", tile_, drawable(roomy::plain(net_.ssid), Font::TITLE));
+    const std::string name = drawable(roomy::plain(net_.ssid), Font::TITLE);
+    const std::string title = name.empty() ? std::string() : tessera::fill(plugin_->text("card_title"), "name", name);
+    tessera::open_card(plugin_->plugin_id(), "code", "", tile_, title);
   }
 
  private:

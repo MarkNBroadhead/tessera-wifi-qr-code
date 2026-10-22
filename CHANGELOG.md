@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.3.2
+- The card's title says what it is: "Wi-Fi Network: " before the network's name.
+
 ## 0.3.1
 - A network name with an emoji shows without it on the tile and the card's title, instead of a box; the code keeps
   the whole name, so phones still join the right network.
