@@ -11,7 +11,6 @@ namespace esphome::wifi_qr {
 using tessera::Font;
 namespace ui = tessera::ui;
 
-static constexpr uint32_t WIFI_ICON = 0xF0928;  // wifi-strength-4, of Tessera's set
 // Version 12 holds two values of 64 plain characters with every one escaped (281 bytes) at the medium level of error
 // correction, far more than a real network (a name of 32 bytes, a password of 63); a usual one is a version 3 or 4,
 // and the encoder picks the smallest that fits. A longer text shows "too_long" instead of a code.
@@ -60,7 +59,7 @@ static void place(lv_obj_t *label, int x, int y, int width, Font face) {
   lv_obj_set_style_text_align(label, LV_TEXT_ALIGN_CENTER, 0);
 }
 
-// The tile: the Wi-Fi icon, the network's name and what a tap does. It draws once; nothing on it changes.
+// The tile: what it is, the network's name and what a tap does. It draws once; nothing on it changes.
 class NetworkTile : public tessera::Tile {
  public:
   explicit NetworkTile(WifiQr *plugin) : plugin_(plugin) {}
@@ -78,40 +77,48 @@ class NetworkTile : public tessera::Tile {
     net_.show_password = c.options["show_password"] | true;
 
     const int w = c.width, h = c.height;
+    // Each line is the person's own words when they wrote some, else Tessera's: the title, the network's name and
+    // what a tap does. Without a network the tile asks for one and has nothing to tap for.
     const bool has_ssid = !net_.ssid.empty();
-    const std::string name = has_ssid ? roomy::plain(net_.ssid) : std::string(plugin_->text("no_network"));
-    const std::string hint = has_ssid ? std::string(plugin_->text("tap_to_show")) : std::string();
+    auto own = [&](const char *option, const std::string &otherwise) {
+      const char *words = c.options[option] | "";
+      return words[0] ? std::string(words) : otherwise;
+    };
+    const std::string title = own("top_line", plugin_->text("title"));
+    const std::string name =
+        has_ssid ? own("middle_line", roomy::plain(net_.ssid)) : std::string(plugin_->text("no_network"));
+    const std::string hint = has_ssid ? own("bottom_line", plugin_->text("tap_to_show")) : std::string();
     const Font name_face = fitting(name, w, {Font::TITLE, Font::BODY_LARGE, Font::BODY});
 
-    icon_ = ui::label(c.parent, Font::ICON, theme::ACCENT);
+    title_ = ui::label(c.parent, Font::BODY, theme::MUTED);
     name_ = ui::label(c.parent, name_face, theme::INK);
     hint_ = ui::label(c.parent, Font::BODY, theme::MUTED);
-    ui::set_text(icon_, ui::icon(WIFI_ICON));
+    ui::set_text(title_, title);
     ui::set_text(name_, name);
     ui::set_text(hint_, hint);
 
-    // The three lines together in the middle of the card; on a card too low for them the hint goes first, the icon next.
+    // The three lines together in the middle of the card; on a card too low for them the hint goes first, the title next.
     const int gap = ui::px(4);
-    const int ih = ui::line_height(Font::ICON), nh = ui::line_height(name_face), hh = ui::line_height(Font::BODY);
-    bool show_icon = true, show_hint = !hint.empty();
-    auto total = [&]() { return (show_icon ? ih + gap : 0) + nh + (show_hint ? hh : 0); };
+    const int th = ui::line_height(Font::BODY), nh = ui::line_height(name_face), hh = ui::line_height(Font::BODY);
+    bool show_title = true, show_hint = !hint.empty();
+    auto total = [&]() { return (show_title ? th + gap : 0) + nh + (show_hint ? hh + gap : 0); };
     if (total() > h) show_hint = false;
-    if (total() > h) show_icon = false;
+    if (total() > h) show_title = false;
     int y = std::max(0, (h - total()) / 2);
-    if (show_icon) {
-      place(icon_, 0, y, w, Font::ICON);
-      y += ih + gap;
+    if (show_title) {
+      place(title_, 0, y, w, Font::BODY);
+      y += th + gap;
     } else {
-      lv_obj_add_flag(icon_, LV_OBJ_FLAG_HIDDEN);
+      lv_obj_add_flag(title_, LV_OBJ_FLAG_HIDDEN);
     }
     place(name_, 0, y, w, name_face);
-    y += nh;
+    y += nh + gap;
     if (show_hint) place(hint_, 0, y, w, Font::BODY);
     else lv_obj_add_flag(hint_, LV_OBJ_FLAG_HIDDEN);
   }
 
   void on_theme() override {
-    ui::set_color(icon_, theme::ACCENT);
+    ui::set_color(title_, theme::MUTED);
     ui::set_color(name_, theme::INK);
     ui::set_color(hint_, theme::MUTED);
   }
@@ -127,7 +134,7 @@ class NetworkTile : public tessera::Tile {
   WifiQr *plugin_;
   int tile_ = -1;
   WifiQr::Network net_{};
-  lv_obj_t *icon_{}, *name_{}, *hint_{};
+  lv_obj_t *title_{}, *name_{}, *hint_{};
 };
 
 // The card: the code as large as the room allows, with what to do and the password beside or under it.

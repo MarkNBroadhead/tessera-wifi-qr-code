@@ -2,7 +2,7 @@
 # every name, label and hint below is a key into translations/<language>.json, part "app".
 # Every field is explained in docs/MANIFEST.md of the plugins repository.
 id: wifi_qr
-version: 0.1.0
+version: 0.2.0
 # 0.10: tessera::Text and tiles and cards made in PSRAM; the card itself is of 0.2.
 api: "0.10"
 icon: wifi
@@ -38,6 +38,10 @@ tiles:
           - { value: nopass, label: security_none }
       - { id: hidden, kind: toggle, default: false, label: hidden, hint: hidden_hint }
       - { id: show_password, kind: toggle, default: true, label: show_password, hint: show_password_hint }
+      # The tile's three lines; empty keeps Tessera's own words in the screen's language.
+      - { id: top_line, kind: text, label: top_line, hint: top_line_hint }
+      - { id: middle_line, kind: text, label: middle_line, hint: middle_line_hint }
+      - { id: bottom_line, kind: text, label: bottom_line, hint: bottom_line_hint }
 
 cards:
   - { id: code, name: card_name, wide: true }

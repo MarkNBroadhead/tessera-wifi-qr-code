@@ -18,6 +18,8 @@ points their phone's camera at it and joins the network, without typing the pass
   other way round.
 - The password is kept in the screen's layout as a tile option, as every option is, and is in the code anyway: use a
   guest network if you would rather not show your main one.
+- The tile shows three lines: "Wi-Fi QR code", the network name and "Tap for the code". Write your own words in
+  **Top line**, **Middle line** or **Bottom line** to change any of them; leave one empty to keep the usual words.
 - Turn off **Show the password** to show only the code, without the password written under it.
 - It uses nothing outside the screen: no Home Assistant entity and no internet service.
 

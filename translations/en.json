@@ -1,6 +1,7 @@
 {
   "_meta": { "name": "English" },
   "screen": {
+    "title": "Wi-Fi QR code",
     "no_network": "Choose a network",
     "tap_to_show": "Tap for the code",
     "scan": "Scan with your phone's camera to join",
@@ -26,6 +27,12 @@
     "hidden": "Hidden network",
     "hidden_hint": "On when the network does not broadcast its name.",
     "show_password": "Show the password",
-    "show_password_hint": "Write the password under the code, for a laptop or a phone without a camera."
+    "show_password_hint": "Write the password under the code, for a laptop or a phone without a camera.",
+    "top_line": "Top line",
+    "top_line_hint": "Small words above the name. Empty: Wi-Fi QR code.",
+    "middle_line": "Middle line",
+    "middle_line_hint": "The large words in the middle. Empty: the network name.",
+    "bottom_line": "Bottom line",
+    "bottom_line_hint": "Small words under the name. Empty: Tap for the code."
   }
 }

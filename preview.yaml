@@ -6,7 +6,7 @@ tiles:
     options: { ssid: Guest Wi-Fi, password: welcome-home }
   - tile: network
     name: Garden
-    options: { ssid: Garden, security: nopass }
+    options: { ssid: Garden, security: nopass, top_line: Guests, middle_line: Join our Wi-Fi }
     sizes: [1x1]
   - tile: network
     name: No network yet

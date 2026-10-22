@@ -1,6 +1,7 @@
 {
   "_meta": { "name": "Nederlands" },
   "screen": {
+    "title": "Wifi-QR-code",
     "no_network": "Kies een netwerk",
     "tap_to_show": "Tik voor de code",
     "scan": "Scan met de camera van je telefoon",
@@ -26,6 +27,12 @@
     "hidden": "Verborgen netwerk",
     "hidden_hint": "Aan als het netwerk zijn naam niet uitzendt.",
     "show_password": "Wachtwoord tonen",
-    "show_password_hint": "Zet het wachtwoord onder de code, voor een laptop of een telefoon zonder camera."
+    "show_password_hint": "Zet het wachtwoord onder de code, voor een laptop of een telefoon zonder camera.",
+    "top_line": "Bovenste regel",
+    "top_line_hint": "Kleine woorden boven de naam. Leeg: Wifi-QR-code.",
+    "middle_line": "Middelste regel",
+    "middle_line_hint": "De grote woorden in het midden. Leeg: de netwerknaam.",
+    "bottom_line": "Onderste regel",
+    "bottom_line_hint": "Kleine woorden onder de naam. Leeg: Tik voor de code."
   }
 }
