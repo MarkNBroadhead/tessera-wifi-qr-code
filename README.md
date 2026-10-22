@@ -20,6 +20,7 @@ points their phone's camera at it and joins the network, without typing the pass
   guest network if you would rather not show your main one.
 - The tile shows three lines: "Wi-Fi QR code", the network name and "Tap for the code". Write your own words in
   **Top line**, **Middle line** or **Bottom line** to change any of them; leave one empty to keep the usual words.
+  Turn off **Show the top line** (or the middle or bottom one) to hide it; the lines left move to the middle.
 - Turn off **Show the password** to show only the code, without the password written under it.
 - It uses nothing outside the screen: no Home Assistant entity and no internet service.
 

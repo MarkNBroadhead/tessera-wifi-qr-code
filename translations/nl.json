@@ -33,6 +33,9 @@
     "middle_line": "Middelste regel",
     "middle_line_hint": "De grote woorden in het midden. Leeg: de netwerknaam.",
     "bottom_line": "Onderste regel",
-    "bottom_line_hint": "Kleine woorden onder de naam. Leeg: Tik voor de code."
+    "bottom_line_hint": "Kleine woorden onder de naam. Leeg: Tik voor de code.",
+    "show_top_line": "Bovenste regel tonen",
+    "show_middle_line": "Middelste regel tonen",
+    "show_bottom_line": "Onderste regel tonen"
   }
 }

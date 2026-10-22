@@ -97,24 +97,38 @@ class NetworkTile : public tessera::Tile {
     ui::set_text(name_, name);
     ui::set_text(hint_, hint);
 
-    // The three lines together in the middle of the card; on a card too low for them the hint goes first, the title next.
+    // Each line has its switch. Without a network the middle line asks for one whatever its switch says, and the
+    // bottom one has no tap to tell of.
+    bool show_title = c.options["show_top_line"] | true;
+    const bool show_name = !has_ssid || (c.options["show_middle_line"] | true);
+    bool show_hint = has_ssid && (c.options["show_bottom_line"] | true);
+
+    // The lines that show, together in the middle of the card with a small gap between; on a card too low for them the
+    // hint goes first, the title next.
     const int gap = ui::px(4);
     const int th = ui::line_height(Font::BODY), nh = ui::line_height(name_face), hh = ui::line_height(Font::BODY);
-    bool show_title = true, show_hint = !hint.empty();
-    auto total = [&]() { return (show_title ? th + gap : 0) + nh + (show_hint ? hh + gap : 0); };
+    auto total = [&]() {
+      const int lines = show_title + show_name + show_hint;
+      return (show_title ? th : 0) + (show_name ? nh : 0) + (show_hint ? hh : 0) + std::max(0, lines - 1) * gap;
+    };
     if (total() > h) show_hint = false;
     if (total() > h) show_title = false;
+    struct Line {
+      lv_obj_t *label;
+      bool show;
+      Font face;
+      int height;
+    };
     int y = std::max(0, (h - total()) / 2);
-    if (show_title) {
-      place(title_, 0, y, w, Font::BODY);
-      y += th + gap;
-    } else {
-      lv_obj_add_flag(title_, LV_OBJ_FLAG_HIDDEN);
+    for (const Line &line : {Line{title_, show_title, Font::BODY, th}, Line{name_, show_name, name_face, nh},
+                             Line{hint_, show_hint, Font::BODY, hh}}) {
+      if (!line.show) {
+        lv_obj_add_flag(line.label, LV_OBJ_FLAG_HIDDEN);
+        continue;
+      }
+      place(line.label, 0, y, w, line.face);
+      y += line.height + gap;
     }
-    place(name_, 0, y, w, name_face);
-    y += nh + gap;
-    if (show_hint) place(hint_, 0, y, w, Font::BODY);
-    else lv_obj_add_flag(hint_, LV_OBJ_FLAG_HIDDEN);
   }
 
   void on_theme() override {

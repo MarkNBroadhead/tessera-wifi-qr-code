@@ -33,6 +33,9 @@
     "middle_line": "Middle line",
     "middle_line_hint": "The large words in the middle. Empty: the network name.",
     "bottom_line": "Bottom line",
-    "bottom_line_hint": "Small words under the name. Empty: Tap for the code."
+    "bottom_line_hint": "Small words under the name. Empty: Tap for the code.",
+    "show_top_line": "Show the top line",
+    "show_middle_line": "Show the middle line",
+    "show_bottom_line": "Show the bottom line"
   }
 }
