@@ -14,7 +14,7 @@
     "name": "Wi-Fi QR Code",
     "summary": "A tile that shows a full-screen QR code your guests scan to join your Wi-Fi.",
     "tile_name": "Wi-Fi QR Code",
-    "tile_example": "Tap to show the code for Guest Wi-Fi",
+    "tile_example": "Tap for the code",
     "card_name": "Wi-Fi QR Code",
     "ssid": "Network name",
     "ssid_hint": "The name of the Wi-Fi network (SSID), as phones list it.",

@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.4.1
+- In the layout editor the tile's placeholder says "Tap for the code", as the tile on the screen does.
+
 ## 0.4.0
 - The code closes by itself after a time you choose: Close the code after, in the tile's options (60 seconds
   unless you change it; 0 keeps it open until Back or a tap).
