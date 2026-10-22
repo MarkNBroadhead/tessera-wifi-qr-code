@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.1
+- A network name with an emoji shows without it on the tile and the card's title, instead of a box; the code keeps
+  the whole name, so phones still join the right network.
+
 ## 0.3.0
 - Hide any of the tile's three lines with its switch: Show the top line, the middle line or the bottom line.
 

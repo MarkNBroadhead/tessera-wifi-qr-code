@@ -53,6 +53,24 @@ static Font fitting(const std::string &text, int width, std::initializer_list<Fo
   return face;
 }
 
+// The text without the characters the screen's fonts cannot draw (an emoji in a network's name), which would show as
+// a box or nothing; the spaces around one that is left out fold into one. The code itself keeps the name whole.
+static std::string drawable(const std::string &text, Font face) {
+  std::string out;
+  for (size_t i = 0; i < text.size();) {
+    const unsigned char lead = text[i];
+    size_t n = lead < 0x80 ? 1 : (lead >> 5) == 0x6 ? 2 : (lead >> 4) == 0xE ? 3 : (lead >> 3) == 0x1E ? 4 : 1;
+    n = std::min(n, text.size() - i);
+    const std::string ch = text.substr(i, n);
+    i += n;
+    if (!ui::covers(ch, face)) continue;
+    if (ch == " " && (out.empty() || out.back() == ' ')) continue;
+    out += ch;
+  }
+  while (!out.empty() && out.back() == ' ') out.pop_back();
+  return out;
+}
+
 static void place(lv_obj_t *label, int x, int y, int width, Font face) {
   lv_obj_set_pos(label, x, y);
   lv_obj_set_size(label, width, ui::line_height(face));
@@ -84,10 +102,11 @@ class NetworkTile : public tessera::Tile {
       const char *words = c.options[option] | "";
       return words[0] ? std::string(words) : otherwise;
     };
-    const std::string title = own("top_line", plugin_->text("title"));
-    const std::string name =
-        has_ssid ? own("middle_line", roomy::plain(net_.ssid)) : std::string(plugin_->text("no_network"));
-    const std::string hint = has_ssid ? own("bottom_line", plugin_->text("tap_to_show")) : std::string();
+    const std::string title = drawable(own("top_line", plugin_->text("title")), Font::BODY);
+    const std::string name = has_ssid ? drawable(own("middle_line", roomy::plain(net_.ssid)), Font::TITLE)
+                                      : std::string(plugin_->text("no_network"));
+    const std::string hint = has_ssid ? drawable(own("bottom_line", plugin_->text("tap_to_show")), Font::BODY)
+                                      : std::string();
     const Font name_face = fitting(name, w, {Font::TITLE, Font::BODY_LARGE, Font::BODY});
 
     title_ = ui::label(c.parent, Font::BODY, theme::MUTED);
@@ -100,7 +119,7 @@ class NetworkTile : public tessera::Tile {
     // Each line has its switch. Without a network the middle line asks for one whatever its switch says, and the
     // bottom one has no tap to tell of.
     bool show_title = c.options["show_top_line"] | true;
-    const bool show_name = !has_ssid || (c.options["show_middle_line"] | true);
+    const bool show_name = !has_ssid || ((c.options["show_middle_line"] | true) && !name.empty());
     bool show_hint = has_ssid && (c.options["show_bottom_line"] | true);
 
     // The lines that show, together in the middle of the card with a small gap between; on a card too low for them the
@@ -141,7 +160,8 @@ class NetworkTile : public tessera::Tile {
   void on_tap() override {
     if (net_.ssid.empty()) return;
     plugin_->next = net_;
-    tessera::open_card(plugin_->plugin_id(), "code", "", tile_, roomy::plain(net_.ssid));
+    // The card's top bar writes its title in Tessera's own font; a name of only emoji leaves it to the tile's name.
+    tessera::open_card(plugin_->plugin_id(), "code", "", tile_, drawable(roomy::plain(net_.ssid), Font::TITLE));
   }
 
  private:
